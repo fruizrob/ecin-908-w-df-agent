@@ -1,0 +1,15 @@
+.map-container {
+  display: flex;
+}
+
+.cell-container {
+  height: 5em;
+  width: 5em;
+  border: 1px solid grey;
+  margin: 1px;
+}
+
+.cell-container p {
+  margin: 0;
+  padding: 0;
+}
