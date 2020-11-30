@@ -35,15 +35,19 @@ Agent.prototype.dfs = function(origin, destination) {
   let cellVisited = [];
   let stack = [];
   stack.push(origin);
-  cellVisited.push(origin);
 
   while (stack.length > 0) {
     let cell = stack.pop();
 
-    if (cellVisited.includes(cell)) continue;
+    if (cellVisited.includes(cell)) {
+      continue;
+    } else {
+      cellVisited.push(cell);
+    }
+
     if (cell === destination) {
       this.calculateScore(cell, origin);
-      return this.getCurrentCell(cell);
+      return this.getWorldCell(cell);
     }
 
     cell.neighbors.forEach(neighbor => {
@@ -57,30 +61,41 @@ Agent.prototype.dfs = function(origin, destination) {
   return false;
 };
 
+Agent.prototype.update = function(addMap) {
+  let cell = this.getCurrentCell();
+  this.updateCell(cell);
+  this.updateKnowledgeBase();
+  cell.value = "X";
+  addMap(lodash.cloneDeep(this.knowledgeBase));
+  cell.value = "S";
+};
+
 Agent.prototype.gameOver = function(addMap) {
+  console.log("now in :", {
+    score: this.score,
+    x: this.currentCell.x,
+    y: this.currentCell.y,
+    current: this.currentCell
+  });
+
   let cell = this.getWorldCell(this.currentCell);
+
   if (cell.state.pit) {
-    this.updateCell(cell);
-    this.updateKnowledgeBase();
-    this.currentCell.value = "X";
-    addMap(lodash.cloneDeep(this.knowledgeBase));
-    console.log("Cayo en un hoyo!");
+    this.currentCell.state.pit = true;
+    this.update(addMap);
+    console.log("se cayo a un hoyo :(");
     this.score -= 1000;
     return true;
   } else if (cell.state.wumpus) {
-    this.updateCell(cell);
-    this.updateKnowledgeBase();
-    this.currentCell.value = "X";
-    addMap(lodash.cloneDeep(this.knowledgeBase));
-    console.log("Te encontraste con un wumpus!");
+    this.currentCell.state.wumpus = true;
+    this.update(addMap);
+    console.log("se encontro con el wumpus!");
     this.score -= 1000;
     return true;
   } else if (cell.state.gold) {
-    this.updateCell(cell);
-    this.updateKnowledgeBase();
-    this.currentCell.value = "X";
-    addMap(lodash.cloneDeep(this.knowledgeBase));
-    console.log("Escapaste con el oro exitosamente!");
+    this.currentCell.state.gold = true;
+    this.update(addMap);
+    console.log("escapo con el oro, felicidades :)");
     this.score += 1000;
     return true;
   }
@@ -90,15 +105,16 @@ Agent.prototype.gameOver = function(addMap) {
 
 Agent.prototype.updateCell = function(cell) {
   const { gold, stench, breeze } = this.getWorldCell(cell).state;
-  console.log(this.getWorldCell(cell).state);
   cell.value = "S";
   this.visited.push(cell);
 
   if (gold) {
+    cell.state.gold = true;
     this.hasGold = true;
   }
 
   if (breeze) {
+    cell.state.breeze = true;
     cell.neighbors.forEach(neighbor => {
       if (
         !this.visited.includes(neighbor) &&
@@ -116,6 +132,7 @@ Agent.prototype.updateCell = function(cell) {
   }
 
   if (stench) {
+    cell.state.stench = true;
     cell.neighbors.forEach(neighbor => {
       if (
         !this.visited.includes(neighbor) &&
@@ -181,14 +198,14 @@ Agent.prototype.hasPit = function(cell) {
   let safeCellsCount = 0;
   let possiblePit = null;
   cell.neighbors.forEach(neighbor => {
-    if (neighbor.value === "S" || neighbor.value === "W") {
+    if (neighbor.value === "S") {
       safeCellsCount += 1;
-    } else {
+    } else if (neighbor.value === "?") {
       possiblePit = neighbor;
     }
   });
 
-  if (safeCellsCount > 2) {
+  if (safeCellsCount === cell.neighbors.length - 1) {
     if (possiblePit !== null) {
       possiblePit.value = "P";
       possiblePit.state.pit = true;
@@ -200,14 +217,14 @@ Agent.prototype.hasWumpus = function(cell) {
   let safeCellsCount = 0;
   let possibleWumpus = null;
   cell.neighbors.forEach(neighbor => {
-    if (neighbor.value === "S" || neighbor.value === "P") {
+    if (neighbor.value === "S") {
       safeCellsCount += 1;
-    } else {
+    } else if (neighbor.value === "?") {
       possibleWumpus = neighbor;
     }
   });
 
-  if (safeCellsCount > 2) {
+  if (safeCellsCount === cell.neighbors.length - 1) {
     if (possibleWumpus !== null) {
       possibleWumpus.value = "W";
       possibleWumpus.state.wumpus = true;
@@ -233,17 +250,11 @@ Agent.prototype.guessMove = function(cell) {
 
   let guessCell = cell.neighbors[randomInt];
 
-  console.log("Guess move", {
-    cell_neighbors: cell.neighbors,
-    length: cell.neighbors.length,
-    random_int: randomInt,
-    guess_cell_value: guessCell.value
-  });
-
   if (guessCell.value !== "?") {
     guessCell = this.guessMove(cell);
   }
 
+  console.log("*adivinando movimiento*", { x: guessCell.x, y: guessCell.y });
   return guessCell;
 };
 
@@ -251,24 +262,24 @@ Agent.prototype.solveMove = function(cell) {
   if (this.map[0][0] === cell && cell.state.stench && this.hasArrow) {
     this.hasArrow = false;
     this.score -= 10;
-    console.log("Arrow Shot!");
+    console.log("flecha lanzada!");
     if (this.getWorldCell(this.map[0][1]).state.wumpus) {
       let wumpusCell = this.map[0][1];
-      console.log("You killed the wumpus by shooting the arrow!");
       this.isWumpusAlive = false;
       wumpusCell.removeStench();
-      wumpusCell.state.wumpus = false;
-      wumpusCell.value = "S";
 
       let wumpusWorldCell = this.getWorldCell(wumpusCell);
       wumpusWorldCell.removeStench();
-      wumpusWorldCell.state.wumpus = false;
+
+      console.log("mato al wumpus");
     }
 
     if (this.isWumpusAlive) {
       let wumpusCell = this.map[1][0];
       wumpusCell.state.wumpus = true;
-      wumpusCell.wumpus = "W";
+      wumpusCell.value = "W";
+
+      console.log("no mato al wumpus");
     }
   }
 
@@ -288,7 +299,6 @@ Agent.prototype.solveMove = function(cell) {
     for (let j = 0; j < this.size; j++) {
       let nextCell = this.map[i][j];
       if (!this.visited.includes(nextCell) && nextCell.value === "S") {
-        console.log({ next_cell: nextCell });
         return this.dfs(cell, nextCell);
       }
     }
@@ -304,6 +314,7 @@ Agent.prototype.solveMove = function(cell) {
             this.map.forEach(wumpusRow => {
               wumpusRow.forEach(inLineCell => {
                 if ((inLineCell.value = "S" && inLineCell.x === auxCell.x)) {
+                  console.log("intentando matar");
                   this.dfs(cell, inLineCell);
                 }
               });
@@ -312,6 +323,7 @@ Agent.prototype.solveMove = function(cell) {
             this.map.forEach(wumpusRow => {
               wumpusRow.forEach(inLineCell => {
                 if ((inLineCell.value = "S" && inLineCell.y === auxCell.y)) {
+                  console.log("intentando matar");
                   this.dfs(cell, inLineCell);
                 }
               });
@@ -323,7 +335,7 @@ Agent.prototype.solveMove = function(cell) {
           auxCell.state.wumpus = false;
           this.hasArrow = false;
           this.score -= 10;
-          console.log("You killed the wumpus by shooting the arrow!");
+          console.log("mato con una flecha al wumpus!");
 
           let wumpusWorldCell = this.getWorldCell(auxCell);
           wumpusWorldCell.removeStench();
@@ -345,29 +357,8 @@ Agent.prototype.start = function(addMap) {
   this.map[0][0].state = this.currentCell.state;
 
   while (!this.gameOver(addMap)) {
-    if (Math.abs(this.score) > 1200) break;
-    let cell = this.getCurrentCell();
-
-    console.log("Start", {
-      score: this.score,
-      start_x: cell.x,
-      start_y: cell.y,
-      cell: cell
-    });
-
-    this.updateCell(cell);
-    this.updateKnowledgeBase();
-    cell.value = "X";
-    addMap(lodash.cloneDeep(this.knowledgeBase));
-    cell.value = "S";
-    this.currentCell = this.solveMove(cell);
-
-    console.log("Next step", {
-      score: this.score,
-      next_x: this.currentCell.x,
-      next_y: this.currentCell.y,
-      next_cell: this.currentCell
-    });
+    this.update(addMap);
+    this.currentCell = this.solveMove(this.getCurrentCell());
   }
 
   console.log("Game over!\nScore: ", this.score);

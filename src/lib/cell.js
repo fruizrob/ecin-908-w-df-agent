@@ -26,8 +26,10 @@ Cell.prototype.setBreeze = function() {
 };
 
 Cell.prototype.removeStench = function() {
+  this.state.wumpus = false;
+  this.value = "S";
   this.neighbors.forEach(cell => {
-    cell.state.breeze = false;
+    cell.state.stench = false;
   });
 };
 

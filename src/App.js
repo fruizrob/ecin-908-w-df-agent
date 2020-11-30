@@ -17,6 +17,8 @@ function App() {
     let agent = new Agent(world, 4);
     setAgent(agent);
     setWorld(world);
+    setMapIdx(0);
+    setMaps([]);
   };
 
   const start = () => {

@@ -22,8 +22,10 @@ export default function Map(props) {
 
               return (
                 <div key={`${i}-${j}`} className="cell-container">
+                  <p style={{ margin: "0.5em" }}>
+                    {cell.value !== "_" && <b>{cell.value}</b>}
+                  </p>
                   {state}
-                  <p>{cell.value}</p>
                 </div>
               );
             })}
@@ -47,8 +49,10 @@ export default function Map(props) {
 
               return (
                 <div key={`${i}-${j}`} className="cell-container">
+                  <p style={{ margin: "0.5em" }}>
+                    {cell.value !== "_" && <b>{cell.value}</b>}
+                  </p>
                   {state}
-                  <p>{cell.value}</p>
                 </div>
               );
             })}

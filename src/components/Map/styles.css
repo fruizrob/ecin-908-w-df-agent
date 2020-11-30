@@ -7,6 +7,10 @@
   width: 5em;
   border: 1px solid grey;
   margin: 1px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
 }
 
 .cell-container p {
